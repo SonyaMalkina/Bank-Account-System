@@ -16,7 +16,7 @@ git clone https://github.com/SonyaMalkina/Bank-Account-System.git
 cd bank_account_system
 
 # Запуск
-paython main.py
+python main.py
 ```
 ## Пример использования
 ```

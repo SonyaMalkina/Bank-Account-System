@@ -7,7 +7,8 @@ from abc import ABC, abstractmethod
 class Transaction:
     """Класс транзакции"""
     def __init__(self, type, amount, date=None):
-        self.type = type #"пополнение", "снятие", "перевод"
+        self.type = type
+        #"пополнение", "снятие", "перевод со счёта", "поступление на счёт"
         self.amount = amount
         self.date = date if date else datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
 
@@ -17,12 +18,14 @@ class TransactionHistoryQueue:
     def __init__(self):
         self.queue = deque()
 
-    def add_transaction(self, transaction):
+    """Добавление транзакции в очередь"""
+    def add_transaction(self, transaction): 
         self.queue.append(transaction)
 
-    def get_all_transactions(self):
+    def get_all(self):
         return list(self.queue)
     
+    """Фильтрация по типу транзакции"""
     def filter_by_type(self, t_type):
         transactions = []
         for trans in self.queue:
@@ -30,6 +33,7 @@ class TransactionHistoryQueue:
                 transactions.append(trans)
         return transactions
     
+    """Фильтрация по дате"""
     def filter_by_date(self, date_str):
         transactions = []
         for trans in self.queue:
@@ -43,7 +47,10 @@ class TransactionHistoryQueue:
     def to_dict(self):
         transactions = []
         for trans in self.queue:
-            transactions.append(trans)
+            data = {"type" : trans.type,
+                    "amount" : trans.amount,
+                    "date" : trans.date}
+            transactions.append(data)
         return transactions
     
     def from_dict(self, data):
@@ -54,10 +61,11 @@ class TransactionHistoryQueue:
 
 
 class Account(ABC):
-    def __init__(self, account_number, owener_name, inital_balance=0):
+    """Абстрактный класс аккаунта"""
+    def __init__(self, account_number, owner_name, inital_balance=0):
         self.balance = inital_balance 
         self.account_number = account_number
-        self.owner = owener_name
+        self.owner = owner_name
         self.history = TransactionHistoryQueue()
 
     @abstractmethod
@@ -94,7 +102,7 @@ class Account(ABC):
     
     def to_dict(self):
         return { "account_number" : self.account_number,
-                "owener" : self.owner, 
+                "owner" : self.owner, 
                 "balance" : self.balance,
                 "type" : self.get_account_type(),
                 "history" : self.history.to_dict() }
@@ -105,12 +113,16 @@ class Account(ABC):
         self.balance = data['balance']
         self.history.from_dict(data.get('history', []))
 
-        # СЮДА ВОЗМОЖНО __СТР__
     
 class CheckingAccount(Account):
     """ Обычный расчетный счёт """
+    def __init__(self, account_number, owener_name, inital_balance=0):
+        super().__init__(account_number, owener_name, inital_balance)
+        self.type = "Расчётный"
+
+
     def get_account_type(self):
-        return "Расчетный"
+        return "Расчётный"
     
 
 class SavingsAccount(Account):
@@ -118,6 +130,7 @@ class SavingsAccount(Account):
     def __init__(self, account_number, owener_name, inital_balance=0, min_balance=50):
         super().__init__(account_number, owener_name, inital_balance)
         self.min_balance = min_balance
+        self.type = "Сберегательный"
     
     def get_account_type(self):
         return "Сберегательный"
@@ -148,6 +161,7 @@ class CreditAccount(Account):
     def __init__(self, account_number, owener_name, inital_balance=0, credit_limit = 500):
         super().__init__(account_number, owener_name, inital_balance)
         self.credit_limit = credit_limit
+        self.type = "Кредитный"
 
 
     def get_account_type(self):
@@ -230,7 +244,7 @@ class BankModel:
             
             self.accounts.clear()
             for acc_data in data['accounts']:
-                acc_type = acc_data['account_type']
+                acc_type = acc_data['type']
                 if acc_type == "Расчётный":
                     acc = CheckingAccount(0, "")
                 elif acc_type == "Сберегательный":
